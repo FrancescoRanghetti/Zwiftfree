@@ -1,0 +1,76 @@
+h1 {
+  font: var(--mat-sys-headline-medium);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+mat-card-content {
+  padding-top: 12px;
+}
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fields.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12px;
+}
+mat-form-field {
+  width: 100%;
+}
+.avatar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  app-avatar-preview {
+    max-width: 260px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+.colors {
+  display: flex;
+  justify-content: space-around;
+  label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font: var(--mat-sys-label-medium);
+  }
+  input[type='color'] {
+    width: 48px;
+    height: 36px;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+.error {
+  color: var(--mat-sys-error);
+}
+.danger-zone p {
+  color: var(--mat-sys-on-surface-variant);
+}
+.danger {
+  --mat-button-outlined-label-text-color: var(--mat-sys-error);
+  --mat-button-outlined-outline-color: var(--mat-sys-error);
+}
+@media (max-width: 599px) {
+  .fields.two {
+    grid-template-columns: 1fr;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,54 @@
+<mat-card class="card" appearance="outlined">
+  <div class="brand"><img src="logo.svg" alt="" width="36" height="36" />Zwiftfree</div>
+  <h1>{{ 'auth.loginTitle' | t }}</h1>
+
+  @if (expired()) {
+    <div class="info" role="status">{{ 'auth.sessionExpired' | t }}</div>
+  }
+  @if (error(); as msg) {
+    <div class="error" role="alert" data-testid="login-error">{{ msg }}</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'auth.email' | t }}</mat-label>
+      <input matInput type="email" formControlName="email" autocomplete="username" />
+      <mat-error><app-field-error [control]="form.controls.email" /></mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'auth.password' | t }}</mat-label>
+      <input
+        matInput
+        [type]="showPassword() ? 'text' : 'password'"
+        formControlName="password"
+        autocomplete="current-password"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        (click)="showPassword.set(!showPassword())"
+        [attr.aria-label]="'auth.togglePassword' | t"
+      >
+        <mat-icon fontSet="material-symbols-outlined">{{
+          showPassword() ? 'visibility_off' : 'visibility'
+        }}</mat-icon>
+      </button>
+      <mat-error><app-field-error [control]="form.controls.password" /></mat-error>
+    </mat-form-field>
+
+    <button mat-flat-button type="submit" [disabled]="busy()">
+      @if (busy()) {
+        <mat-spinner diameter="20" />
+      } @else {
+        {{ 'auth.loginAction' | t }}
+      }
+    </button>
+  </form>
+
+  <p class="switch">
+    {{ 'auth.noAccount' | t }} <a routerLink="/register">{{ 'auth.registerAction' | t }}</a>
+  </p>
+  <p class="attribution">{{ 'footer.attribution' | t }}</p>
+</mat-card>

@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Zwiftfree.iml" filepath="$PROJECT_DIR$/.idea/Zwiftfree.iml" />
-      <module fileurl="file://$PROJECT_DIR$/backend/Zwiftfree-be/Zwiftfree-be.iml" filepath="$PROJECT_DIR$/backend/Zwiftfree-be/Zwiftfree-be.iml" />
     </modules>
   </component>
 </project>

@@ -1,0 +1,4 @@
+# Test overrides (merged on top of the main application.yml).
+zwiftfree:
+  roads:
+    data-dir: src/test/resources/roads-fixture

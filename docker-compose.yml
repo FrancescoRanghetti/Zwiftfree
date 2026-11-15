@@ -1,0 +1,59 @@
+name: zwiftfree
+
+services:
+  db:
+    build: ./db
+    image: zwiftfree-db:17
+    environment:
+      POSTGRES_DB: ${DB_NAME:-zwiftfree}
+      POSTGRES_USER: ${DB_USER:-zwiftfree}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (see .env.example)}
+    ports:
+      - "${DB_HOST_PORT:-5442}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend/Zwiftfree-be
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-zwiftfree}
+      DB_USER: ${DB_USER:-zwiftfree}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4280}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (see .env.example)}
+      ROAD_DATA_DIR: /data/out
+    volumes:
+      # Road network produced by data/scarica_ticino.py, imported at startup when stats.json changes.
+      - ./data/out:/data/out:ro
+    ports:
+      - "${BACKEND_HOST_PORT:-8090}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # The JRE image has no curl/wget: talk HTTP over bash's /dev/tcp.
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf "GET /actuator/health HTTP/1.0\r\n\r\n" >&3 && grep -q UP <&3'
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 180s
+
+  frontend:
+    build: ./frontend/zwiftfree-fe
+    ports:
+      - "${FRONTEND_HOST_PORT:-4280}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db-data:

@@ -1,0 +1,334 @@
+<div class="layout">
+  <app-ticino-map
+    class="map"
+    [colorMode]="colorMode()"
+    [route]="mapRoute()"
+    [waypoints]="mapWaypoints()"
+    [overlay]="colorMode() === 'explored' && explored.hasValue() ? explored.value().geojson : null"
+    [clickMode]="activeTab() === 'plan' ? 'waypoint' : 'inspect'"
+    (mapClick)="onMapClick($event)"
+    (waypointMoved)="planner.movePoint($event.index, $event.point)"
+  />
+
+  <div class="map-overlay top">
+    <app-place-search (selected)="onPlace($event)" />
+    @if (place(); as p) {
+      <div class="place-actions mat-elevation-z2">
+        <strong>{{ p.name }}</strong>
+        <button mat-stroked-button (click)="addPlaceAsWaypoint()">
+          <mat-icon fontSet="material-symbols-outlined">add_location_alt</mat-icon
+          >{{ 'routes.addPoint' | t }}
+        </button>
+        <button mat-stroked-button (click)="freeRideFrom(p, p.name)" data-testid="free-ride-place">
+          <mat-icon fontSet="material-symbols-outlined">explore</mat-icon
+          >{{ 'routes.freeRide' | t }}
+        </button>
+        <button mat-icon-button (click)="place.set(null)" [attr.aria-label]="'common.close' | t">
+          <mat-icon fontSet="material-symbols-outlined">close</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="map-overlay legend mat-elevation-z2">
+    <mat-button-toggle-group
+      [value]="colorMode()"
+      (change)="colorMode.set($event.value)"
+      hideSingleSelectionIndicator
+      [attr.aria-label]="'map.colorBy' | t"
+    >
+      <mat-button-toggle value="grade">{{ 'map.byGrade' | t }}</mat-button-toggle>
+      <mat-button-toggle value="type">{{ 'map.byType' | t }}</mat-button-toggle>
+      <mat-button-toggle value="explored" data-testid="explored-mode">{{
+        'explored.mode' | t
+      }}</mat-button-toggle>
+    </mat-button-toggle-group>
+    <ul>
+      @if (colorMode() === 'explored') {
+        @if (explored.hasValue()) {
+          @let ex = explored.value();
+          <li class="explored" data-testid="explored-percent">
+            <span class="swatch" [style.background]="exploredColor"></span>
+            @if (ex.exploredEdges) {
+              {{ 'explored.percent' | t: { p: exploredPercent(ex.percent) } }}
+            } @else {
+              {{ 'explored.none' | t }}
+            }
+          </li>
+          @if (ex.exploredEdges) {
+            <li class="muted">
+              {{
+                'explored.detail'
+                  | t: { km: formatKm(ex.exploredKm * 1000), total: formatKm(ex.totalKm * 1000) }
+              }}
+            </li>
+          }
+        }
+      } @else if (colorMode() === 'grade') {
+        @for (s of gradeLegend; track s.label) {
+          <li><span class="swatch" [style.background]="s.color"></span>{{ s.label }}</li>
+        }
+      } @else {
+        @for (s of typeLegend; track s.rank) {
+          <li><span class="swatch" [style.background]="s.color"></span>{{ s.labelKey | t }}</li>
+        }
+      }
+    </ul>
+    <p class="hint">{{ 'map.inspectHint' | t }}</p>
+  </div>
+
+  <aside class="panel">
+    <mat-tab-group
+      [selectedIndex]="activeTab() === 'plan' ? 0 : 1"
+      (selectedIndexChange)="onTabChange($event)"
+      mat-stretch-tabs
+    >
+      <mat-tab [label]="'routes.planTab' | t">
+        <div class="tab">
+          @if (planner.waypoints().length === 0) {
+            <p class="hint" data-testid="plan-hint">{{ 'routes.planHint' | t }}</p>
+          }
+          <ol class="waypoints">
+            @for (w of planner.waypoints(); track $index; let i = $index, n = $count) {
+              <li>
+                <span class="badge" [class.start]="i === 0" [class.end]="i === n - 1 && n > 1">{{
+                  i === 0 ? 'A' : i === n - 1 ? 'B' : i
+                }}</span>
+                <span class="wp-label">{{ waypointLabel(i, n) }}</span>
+                <small>{{ w.lat | number: '1.4-4' }}, {{ w.lon | number: '1.4-4' }}</small>
+                <button
+                  mat-icon-button
+                  (click)="planner.removePoint(i)"
+                  [attr.aria-label]="'routes.removePoint' | t"
+                >
+                  <mat-icon fontSet="material-symbols-outlined">close</mat-icon>
+                </button>
+              </li>
+            }
+          </ol>
+          @if (planner.waypoints().length > 0) {
+            <div class="row">
+              <button mat-button (click)="planner.reverse()" [disabled]="!planner.canPlan()">
+                <mat-icon fontSet="material-symbols-outlined">swap_vert</mat-icon
+                >{{ 'routes.reverse' | t }}
+              </button>
+              <button mat-button (click)="planner.clear()">
+                <mat-icon fontSet="material-symbols-outlined">delete_sweep</mat-icon
+                >{{ 'routes.clear' | t }}
+              </button>
+            </div>
+          }
+
+          <h3>{{ 'routes.costProfile' | t }}</h3>
+          <mat-button-toggle-group
+            class="profiles"
+            [value]="planner.profile()"
+            (change)="planner.profile.set($event.value)"
+            [attr.aria-label]="'routes.costProfile' | t"
+          >
+            @for (p of profiles; track p) {
+              <mat-button-toggle [value]="p" [attr.data-testid]="'profile-' + p">{{
+                profileLabel(p)
+              }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+          <mat-slide-toggle
+            [checked]="planner.loop()"
+            (change)="planner.loop.set($event.checked)"
+            class="loop"
+            >{{ 'routes.loop' | t }}</mat-slide-toggle
+          >
+
+          @if (planner.loading()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+          @if (planner.error(); as err) {
+            <p class="error" role="alert">{{ err }}</p>
+          }
+
+          @if (planner.result(); as r) {
+            <div class="stats" data-testid="plan-stats">
+              <div>
+                <span class="v">{{ formatKm(r.lengthM) }}</span><span class="u">km</span>
+              </div>
+              <div>
+                <span class="v">+{{ formatM(r.ascentM) }}</span
+                ><span class="u">m</span>
+              </div>
+              <div>
+                <span class="v">−{{ formatM(r.descentM) }}</span
+                ><span class="u">m</span>
+              </div>
+              <div>
+                <span class="v">{{ r.maxGrade | number: '1.0-1' }}</span><span class="u"
+                  >% max</span
+                >
+              </div>
+            </div>
+            <app-elevation-profile [profile]="r.profile" />
+            @if (r.roadNames.length) {
+              <p class="via">
+                {{ 'routes.viaRoads' | t }}: {{ r.roadNames.slice(0, 5).join(' · ') }}
+              </p>
+            }
+            <div class="actions">
+              <button mat-flat-button (click)="ridePlan()" data-testid="ride-plan">
+                <mat-icon fontSet="material-symbols-outlined">directions_bike</mat-icon
+                >{{ 'routes.rideThis' | t }}
+              </button>
+              <button mat-stroked-button (click)="saveRoute()" data-testid="save-route">
+                <mat-icon fontSet="material-symbols-outlined">bookmark_add</mat-icon
+                >{{ 'routes.save' | t }}
+              </button>
+            </div>
+          }
+          @if (planner.waypoints().length > 0) {
+            <button mat-button class="free" (click)="freeRideFromStart()">
+              <mat-icon fontSet="material-symbols-outlined">explore</mat-icon
+              >{{ 'routes.freeRideFromStart' | t }}
+            </button>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="'routes.savedTab' | t">
+        <div class="tab">
+          @if (routes.isLoading()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+          @if (routes.error()) {
+            <p class="error" role="alert">{{ 'routes.loadError' | t }}</p>
+          }
+          <ul class="route-list">
+            @for (r of routes.value() ?? []; track r.id) {
+              <li [class.selected]="selectedId() === r.id">
+                <button
+                  class="route-card"
+                  (click)="selectRoute(r)"
+                  [attr.data-testid]="'route-' + r.id"
+                >
+                  <app-route-thumbnail [track]="r.preview" class="thumb" />
+                  <span class="info">
+                    <span class="name">{{ r.name }}</span>
+                    <span class="meta"
+                      >{{ formatKm(r.lengthM) }} km · +{{ formatM(r.ascentM) }} m · max
+                      {{ r.maxGrade | number: '1.0-1' }}%</span
+                    >
+                    <span class="tags">
+                      @if (r.official) {
+                        <span class="tag official">{{ 'routes.official' | t }}</span>
+                      } @else if (r.mine) {
+                        <span class="tag">{{ 'routes.mine' | t }}</span>
+                      } @else {
+                        <span class="tag">{{ 'routes.publicTag' | t }}</span>
+                      }
+                      @if (r.loop) {
+                        <span class="tag">{{ 'routes.loopTag' | t }}</span>
+                      }
+                    </span>
+                  </span>
+                </button>
+
+                @if (selectedId() === r.id) {
+                  <div class="detail">
+                    @if (detail.isLoading()) {
+                      <mat-progress-bar mode="indeterminate" />
+                    }
+                    @if (detail.value(); as d) {
+                      @if (d.summary.description) {
+                        <p>{{ d.summary.description }}</p>
+                      }
+                      <app-elevation-profile
+                        [profile]="d.elevationProfile"
+                        [highlight]="highlight()"
+                      />
+                      @if (d.segments.length) {
+                        <h3>{{ 'routes.segments' | t }}</h3>
+                        <ul class="segments">
+                          @for (s of d.segments; track s.id) {
+                            <li>
+                              <button
+                                mat-button
+                                (click)="
+                                  highlight.set({ startM: s.startM, endM: s.endM, label: s.name })
+                                "
+                              >
+                                <mat-icon fontSet="material-symbols-outlined">{{
+                                  s.type === 'CLIMB' ? 'landscape' : 'speed'
+                                }}</mat-icon>
+                                {{ s.name }}
+                              </button>
+                              <small
+                                >{{ formatKm(s.lengthM) }} km ·
+                                {{ s.avgGrade | number: '1.1-1' }}%</small
+                              >
+                            </li>
+                          }
+                        </ul>
+                      }
+                      <h3>{{ 'routes.leaderboard' | t }}</h3>
+                      @for (b of boardsWithTimes(); track b.segmentId) {
+                        <div class="board" data-testid="leaderboard">
+                          <strong>{{ b.name }}</strong>
+                          <ol>
+                            @for (e of b.efforts; track e.rideId + e.elapsedS) {
+                              <li>
+                                <a [routerLink]="['/history', e.rideId]">{{
+                                  duration(e.elapsedS)
+                                }}</a>
+                                <span class="muted"
+                                  >{{ e.date | date: 'd MMM y' }}
+                                  @if (e.avgPower !== null) {
+                                    · {{ e.avgPower }} W
+                                  }
+                                </span>
+                              </li>
+                            }
+                          </ol>
+                        </div>
+                      } @empty {
+                        <p class="hint">{{ 'routes.leaderboardEmpty' | t }}</p>
+                      }
+                      <div class="actions">
+                        <button mat-flat-button (click)="rideRoute(r)" data-testid="ride-route">
+                          <mat-icon fontSet="material-symbols-outlined">directions_bike</mat-icon
+                          >{{ 'routes.rideThis' | t }}
+                        </button>
+                        <button
+                          mat-stroked-button
+                          (click)="
+                            freeRideFrom(
+                              { lon: d.coordinates[0][0], lat: d.coordinates[0][1] },
+                              r.name
+                            )
+                          "
+                        >
+                          <mat-icon fontSet="material-symbols-outlined">explore</mat-icon
+                          >{{ 'routes.freeRideFromStart' | t }}
+                        </button>
+                        @if (r.mine) {
+                          <button
+                            mat-icon-button
+                            (click)="deleteRoute(r)"
+                            [matTooltip]="'routes.delete' | t"
+                            [attr.aria-label]="'routes.delete' | t"
+                          >
+                            <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </li>
+            } @empty {
+              @if (!routes.isLoading()) {
+                <li class="hint">{{ 'routes.none' | t }}</li>
+              }
+            }
+          </ul>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </aside>
+</div>
