@@ -1,0 +1,68 @@
+<section class="page">
+  <header>
+    <h1>{{ 'home.welcome' | t }}</h1>
+    <p class="tagline">{{ 'app.tagline' | t }}</p>
+  </header>
+
+  @if (week.hasValue()) {
+    @let w = week.value();
+    <div class="overview" data-testid="home-overview">
+      <mat-card appearance="outlined" class="info">
+        <h2>{{ 'home.thisWeek' | t }}</h2>
+        <p data-testid="week-totals">
+          {{
+            'home.weekTotals'
+              | t
+                : {
+                    rides: w.rides,
+                    km: km(w.distanceM),
+                    time: duration(w.movingTimeS),
+                    ascent: m(w.ascentM),
+                  }
+          }}
+        </p>
+      </mat-card>
+      <mat-card appearance="outlined" class="info">
+        <h2>{{ 'home.lastRide' | t }}</h2>
+        @if (w.lastRide; as r) {
+          <a [routerLink]="['/history', r.id]" data-testid="last-ride">
+            {{ r.routeName ?? ('history.freeRide' | t) }}
+          </a>
+          <p class="muted">
+            {{ r.startedAt | date: 'EEEE d MMMM, HH:mm' }} · {{ km(r.distanceM) }} km ·
+            {{ duration(r.movingTimeS) }} · +{{ m(r.ascentM) }} m
+          </p>
+        } @else {
+          <p class="muted">{{ 'home.noRides' | t }}</p>
+        }
+      </mat-card>
+    </div>
+  }
+
+  <div class="grid">
+    @for (card of cards; track card.path) {
+      <a
+        class="card-link"
+        [routerLink]="card.path"
+        [attr.data-testid]="'home-card-' + card.path.slice(1)"
+      >
+        <mat-card appearance="outlined" class="card" [class.primary]="card.path === '/ride'">
+          <mat-icon fontSet="material-symbols-outlined" class="icon">{{ card.icon }}</mat-icon>
+          <h2>{{ card.labelKey | t }}</h2>
+          <p>{{ card.descKey! | t }}</p>
+        </mat-card>
+      </a>
+    }
+  </div>
+
+  @if (health() !== undefined) {
+    <p class="server" data-testid="server-status">
+      <span class="dot" [class.up]="health() !== null"></span>
+      {{ 'home.serverStatus' | t }}:
+      {{ (health() ? 'home.serverUp' : 'home.serverDown') | t }}
+      @if (health(); as h) {
+        <span class="version">v{{ h.version }}</span>
+      }
+    </p>
+  }
+</section>

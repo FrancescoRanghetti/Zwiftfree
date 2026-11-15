@@ -1,0 +1,258 @@
+:host {
+  display: block;
+}
+.page {
+  padding: 16px;
+  max-width: 1000px;
+}
+.choose-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+.small {
+  font-size: 0.75rem;
+}
+.pad {
+  padding: 16px;
+}
+.center {
+  display: grid;
+  place-items: center;
+  height: 60vh;
+}
+.ride {
+  position: relative;
+  height: calc(100dvh - 64px - 24px);
+  min-height: 520px;
+  overflow: hidden;
+}
+.map {
+  position: absolute;
+  inset: 0;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 3;
+  padding: 16px;
+}
+.preride {
+  width: min(440px, 100%);
+}
+.devices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.sim-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rider {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.rider .go,
+.rider .error {
+  grid-column: 1 / -1;
+}
+.error {
+  color: var(--mat-sys-error);
+}
+.top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.top > * {
+  pointer-events: auto;
+}
+.where {
+  background: rgba(18, 18, 18, 0.75);
+  color: #fff;
+  border-radius: 16px;
+  padding: 3px 12px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.road {
+  font-weight: 600;
+}
+.next {
+  margin-left: 8px;
+  color: #ffcc80;
+}
+.side {
+  position: absolute;
+  right: 8px;
+  bottom: 196px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.trainer-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(18, 18, 18, 0.82);
+  color: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  min-width: 180px;
+}
+.trainer-box .connected {
+  color: #66bb6a;
+}
+.trainer-box .connecting {
+  color: #ffc107;
+}
+.trainer-box .error {
+  color: #ef5350;
+}
+.avatar-box {
+  width: 160px;
+  background: linear-gradient(rgba(144, 164, 174, 0.85), rgba(84, 110, 122, 0.85));
+  border-radius: 12px;
+  padding: 4px 8px;
+  text-align: center;
+  color: #fff;
+  font-size: 0.8rem;
+}
+.controls {
+  position: absolute;
+  left: 8px;
+  bottom: 196px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  max-width: calc(100% - 290px);
+}
+.controls button:not(.end) {
+  background: rgba(18, 18, 18, 0.82);
+  color: #fff;
+}
+.controls button:disabled:not(.end) {
+  color: rgba(255, 255, 255, 0.45);
+}
+.end {
+  --mdc-filled-button-container-color: #c62828;
+  background: #c62828;
+  color: #fff;
+}
+.end.confirm {
+  background: #ff1744;
+}
+.offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #ffcc80;
+  background: rgba(18, 18, 18, 0.75);
+  border-radius: 12px;
+  padding: 2px 8px;
+}
+.profile {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 180px;
+  z-index: 2;
+  background: rgba(18, 18, 18, 0.82);
+}
+.paused-banner {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 6px #000;
+}
+.crash-banner,
+.pee-banner {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  border-radius: 16px;
+  color: #fff;
+  text-align: center;
+}
+.crash-banner {
+  background: rgba(183, 28, 28, 0.88);
+}
+.crash-banner strong {
+  font-size: 1.5rem;
+}
+.pee-banner {
+  background: rgba(13, 71, 161, 0.85);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.pee-banner small {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.ride.paused .map {
+  filter: grayscale(0.6);
+}
+@media (max-width: 700px) {
+  .avatar-box {
+    display: none;
+  }
+  .controls {
+    bottom: 146px;
+    max-width: calc(100% - 16px);
+  }
+  .side {
+    left: 8px;
+    right: 8px;
+    bottom: 240px;
+    align-items: stretch;
+  }
+  .profile {
+    height: 140px;
+  }
+}
+
+.inline {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  margin-right: 4px;
+}

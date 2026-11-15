@@ -1,0 +1,6 @@
+.env
+.DS_Store
+.idea/workspace.xml
+# Generated road network (~50 MB): rebuild with data/scarica_ticino.py
+data/out/
+data/cache/

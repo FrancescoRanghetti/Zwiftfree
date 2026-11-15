@@ -1,0 +1,102 @@
+<section class="page">
+  <h1>{{ 'nav.settings' | t }}</h1>
+
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="grid">
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'settings.devices' | t }}</mat-card-title>
+          <mat-card-subtitle>{{ 'settings.devicesHint' | t }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (knownDevices.devices().length === 0) {
+            <p class="muted" data-testid="no-devices">{{ 'settings.noDevices' | t }}</p>
+          } @else {
+            <mat-list>
+              @for (d of knownDevices.devices(); track d.id) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon fontSet="material-symbols-outlined">{{
+                    d.kind === 'trainer' ? 'pedal_bike' : 'favorite'
+                  }}</mat-icon>
+                  <span matListItemTitle>{{ d.name }}</span>
+                  <span matListItemLine>{{ d.lastConnectedAt | date: 'short' }}</span>
+                  <button
+                    mat-icon-button
+                    matListItemMeta
+                    type="button"
+                    (click)="deviceManager.forget(d.id)"
+                    [attr.aria-label]="'settings.forget' | t"
+                  >
+                    <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+                  </button>
+                </mat-list-item>
+              }
+            </mat-list>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'settings.trainer' | t }}</mat-card-title>
+          <mat-card-subtitle>{{ 'settings.difficultyHint' | t }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <label class="slider-label" for="difficulty">
+            {{ 'settings.difficulty' | t }}:
+            <strong>{{ form.controls.trainerDifficultyPct.value }}%</strong>
+          </label>
+          <mat-slider min="0" max="100" step="5" discrete [displayWith]="formatPct" class="full">
+            <input id="difficulty" matSliderThumb formControlName="trainerDifficultyPct" />
+          </mat-slider>
+
+          <div class="row">
+            <span>{{ 'settings.units' | t }}</span>
+            <mat-radio-group formControlName="units" [attr.aria-label]="'settings.units' | t">
+              <mat-radio-button value="metric">{{ 'settings.metric' | t }}</mat-radio-button>
+              <mat-radio-button value="imperial">{{ 'settings.imperial' | t }}</mat-radio-button>
+            </mat-radio-group>
+          </div>
+          <mat-slide-toggle formControlName="audioEnabled">{{
+            'settings.audio' | t
+          }}</mat-slide-toggle>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'settings.avatarEvents' | t }}</mat-card-title>
+          <mat-card-subtitle>{{ 'settings.avatarEventsHint' | t }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="toggles">
+          <mat-slide-toggle formControlName="peeBreakEnabled" data-testid="pee-toggle">
+            {{ 'settings.peeBreak' | t }}
+          </mat-slide-toggle>
+          <mat-form-field appearance="outline" class="seconds">
+            <mat-label>{{ 'settings.peeBreakAfter' | t }}</mat-label>
+            <input matInput type="number" formControlName="peeBreakAfterSeconds" />
+            <span matTextSuffix>s</span>
+            <mat-error
+              ><app-field-error [control]="form.controls.peeBreakAfterSeconds"
+            /></mat-error>
+          </mat-form-field>
+          <mat-slide-toggle formControlName="crashEventsEnabled">
+            {{ 'settings.crashes' | t }}
+          </mat-slide-toggle>
+          <mat-slide-toggle formControlName="cornerAssistEnabled">
+            {{ 'settings.cornerAssist' | t }}
+          </mat-slide-toggle>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    @if (error(); as msg) {
+      <p class="error" role="alert">{{ msg }}</p>
+    }
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="saving()" data-testid="save-settings">
+        {{ 'common.save' | t }}
+      </button>
+    </div>
+  </form>
+</section>

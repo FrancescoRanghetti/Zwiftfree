@@ -1,0 +1,254 @@
+@if (!intent()) {
+  <section class="page chooser" data-testid="ride-chooser">
+    <h1>{{ 'nav.ride' | t }}</h1>
+    <p>{{ 'ride.chooseHow' | t }}</p>
+    <div class="choose-grid">
+      <mat-card appearance="outlined">
+        <mat-card-header
+          ><mat-card-title>{{ 'ride.savedRoutes' | t }}</mat-card-title></mat-card-header
+        >
+        <mat-action-list>
+          @for (r of routes(); track r.id) {
+            <button
+              mat-list-item
+              type="button"
+              (click)="chooseRoute(r.id, r.name)"
+              data-testid="choose-route"
+            >
+              <span matListItemTitle>{{ r.name }}</span>
+              <span matListItemLine>{{ km(r.lengthM) }} km · +{{ m(r.ascentM) }} m</span>
+            </button>
+          } @empty {
+            <p class="muted pad">{{ 'routes.none' | t }}</p>
+          }
+        </mat-action-list>
+      </mat-card>
+      <mat-card appearance="outlined">
+        <mat-card-header
+          ><mat-card-title>{{ 'ride.freeRide' | t }}</mat-card-title></mat-card-header
+        >
+        <mat-card-content>
+          <p class="muted">{{ 'ride.freeRideHint' | t }}</p>
+          <app-place-search (selected)="freeRideFrom($event)" />
+          <a mat-button routerLink="/routes">
+            <mat-icon fontSet="material-symbols-outlined">map</mat-icon>{{ 'ride.goToMap' | t }}
+          </a>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+} @else {
+  @switch (session.phase()) {
+    @case ('loading') {
+      <div class="center"><mat-spinner diameter="48" /></div>
+    }
+    @case ('error') {
+      <section class="page">
+        <mat-card appearance="outlined" class="pad" data-testid="ride-error">
+          <p>{{ session.error() }}</p>
+          <a mat-flat-button routerLink="/routes">{{ 'ride.goToMap' | t }}</a>
+        </mat-card>
+      </section>
+    }
+    @default {
+      @let h = session.hud();
+      <div class="ride" [class.paused]="session.paused()">
+        <app-ride-map class="map" [followHeading]="followHeading()" [lockZoom]="lockZoom()" />
+
+        @if (session.phase() === 'ready') {
+          <div class="overlay">
+            <mat-card class="preride" data-testid="preride">
+              <mat-card-header>
+                <mat-card-title>{{ session.title() }}</mat-card-title>
+                @if (session.lengthM() !== null) {
+                  <mat-card-subtitle
+                    >{{ km(session.lengthM()) }} km · +{{
+                      m(session.ascentPlannedM())
+                    }}
+                    m</mat-card-subtitle
+                  >
+                }
+              </mat-card-header>
+              <mat-card-content>
+                <app-device-picker class="devices" />
+                <p class="sim-mode">
+                  @if (devices.trainerName(); as name) {
+                    <mat-icon fontSet="material-symbols-outlined">pedal_bike</mat-icon>
+                    {{ 'ride.trainerMode' | t: { name } }}
+                  } @else {
+                    <mat-icon fontSet="material-symbols-outlined">sports_esports</mat-icon>
+                    {{ 'ride.simulatorMode' | t }}
+                  }
+                </p>
+                <form [formGroup]="rider" class="rider" (ngSubmit)="begin()">
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'account.weight' | t }}</mat-label>
+                    <input matInput type="number" formControlName="weightKg" min="30" max="250" />
+                    <span matTextSuffix>kg</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>FTP</mat-label>
+                    <input matInput type="number" formControlName="ftpWatts" min="50" max="600" />
+                    <span matTextSuffix>W</span>
+                  </mat-form-field>
+                  @if (startError() || session.error(); as err) {
+                    <p class="error" role="alert">{{ err }}</p>
+                  }
+                  <button
+                    mat-flat-button
+                    type="submit"
+                    class="go"
+                    [disabled]="rider.invalid || starting()"
+                    data-testid="start-ride"
+                  >
+                    <mat-icon fontSet="material-symbols-outlined">play_arrow</mat-icon
+                    >{{ 'ride.start' | t }}
+                  </button>
+                </form>
+                <p class="muted small">{{ 'ride.keysHelp' | t }}</p>
+                <p class="muted small">
+                  <mat-icon fontSet="material-symbols-outlined" class="inline">cast</mat-icon>
+                  <a routerLink="/live" target="_blank">{{ 'ride.secondScreen' | t }}</a>
+                </p>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        } @else {
+          <div class="top">
+            <app-ride-hud [hud]="h" />
+            <div class="where" data-testid="where">
+              <span class="road">{{ h.road || ('map.unnamedRoad' | t) }}</span>
+              @if (h.nextPlace; as p) {
+                <span class="next">→ {{ p.name }} · {{ km(p.distanceM) }} km</span>
+              }
+            </div>
+            <app-turn-arrows
+              [choices]="session.choices()"
+              [selected]="session.selected()"
+              (choose)="session.choose($event)"
+            />
+          </div>
+
+          <aside class="side">
+            <div class="avatar-box">
+              <app-avatar-rider
+                [config]="avatar()"
+                [pose]="h.state"
+                [cadence]="h.cadence"
+                [remounting]="h.remounting"
+                [label]="'ride.state.' + h.state | t"
+              />
+              <span class="state" data-testid="rider-state">
+                @if (h.state === 'PEE_BREAK') {
+                  {{ 'ride.peeTimer' | t: { time: time(h.stateSeconds) } }}
+                } @else {
+                  {{ 'ride.state.' + h.state | t }}
+                }
+              </span>
+            </div>
+            @if (session.usingSimulator()) {
+              <app-sim-panel [trainer]="session.simulator" [grade]="session.trainerGrade()" />
+            } @else {
+              <div class="trainer-box" data-testid="trainer-box">
+                <strong>{{ session.trainerName() }}</strong>
+                <span [class]="devices.trainer()">{{
+                  'devices.status.' + devices.trainer() | t
+                }}</span>
+                <span>{{ 'sim.trainerGrade' | t }}: {{ session.trainerGrade() }}%</span>
+                @if (session.hrName(); as hr) {
+                  <span>♥ {{ hr }}</span>
+                }
+              </div>
+            }
+          </aside>
+
+          <div class="controls">
+            <button
+              mat-flat-button
+              type="button"
+              (click)="session.togglePause()"
+              data-testid="pause"
+            >
+              <mat-icon fontSet="material-symbols-outlined">{{
+                session.paused() ? 'play_arrow' : 'pause'
+              }}</mat-icon>
+              {{ (session.paused() ? 'ride.resume' : 'ride.pause') | t }}
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="!session.canTurnAround()"
+              (click)="session.turnAround()"
+              [matTooltip]="'ride.turnaroundHelp' | t"
+              data-testid="turnaround"
+            >
+              <mat-icon fontSet="material-symbols-outlined">u_turn_left</mat-icon
+              >{{ 'ride.turnaround' | t }}
+            </button>
+            <button
+              mat-flat-button
+              type="button"
+              class="end"
+              [class.confirm]="confirmEnd()"
+              [disabled]="session.phase() === 'finishing'"
+              (click)="end()"
+              data-testid="end-ride"
+            >
+              <mat-icon fontSet="material-symbols-outlined">stop</mat-icon>
+              {{ (confirmEnd() ? 'ride.confirmEnd' : 'ride.end') | t }}
+            </button>
+            <mat-button-toggle
+              [checked]="followHeading()"
+              (change)="followHeading.set($event.source.checked)"
+              [matTooltip]="'ride.followHeading' | t"
+              [attr.aria-label]="'ride.followHeading' | t"
+            >
+              <mat-icon fontSet="material-symbols-outlined">explore</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle
+              [checked]="lockZoom()"
+              (change)="lockZoom.set($event.source.checked)"
+              [matTooltip]="'ride.lockZoom' | t"
+              [attr.aria-label]="'ride.lockZoom' | t"
+            >
+              <mat-icon fontSet="material-symbols-outlined">lock</mat-icon>
+            </mat-button-toggle>
+            @if (session.uploadPending() > 0 && session.offline()) {
+              <span class="offline" [matTooltip]="'ride.offlineHelp' | t">
+                <mat-icon fontSet="material-symbols-outlined">cloud_off</mat-icon
+                >{{ session.uploadPending() }}
+              </span>
+            }
+          </div>
+
+          @if (session.paused()) {
+            <div class="paused-banner">{{ 'ride.paused' | t }}</div>
+          } @else if (h.state === 'CRASHED' || h.state === 'RECOVERING') {
+            <div class="crash-banner" role="alert" data-testid="crash-banner">
+              <strong>{{ 'ride.crashed' | t }}</strong>
+              @if (h.penaltyLeft > 0) {
+                <span>{{ 'ride.crashWait' | t: { s: ceil(h.penaltyLeft) } }}</span>
+              } @else {
+                <span>{{ 'ride.crashPedal' | t }}</span>
+              }
+            </div>
+          } @else if (h.state === 'PEE_BREAK') {
+            <div class="pee-banner" data-testid="pee-banner">
+              💧 {{ 'ride.peeTimer' | t: { time: time(h.stateSeconds) } }}
+              <small>{{ 'ride.peeResume' | t }}</small>
+            </div>
+          }
+        }
+
+        @if (session.profile().length > 1) {
+          <app-elevation-profile
+            class="profile"
+            [profile]="session.profile()"
+            [positionM]="session.positionM()"
+            [highlight]="highlight()"
+          />
+        }
+      </div>
+    }
+  }
+}

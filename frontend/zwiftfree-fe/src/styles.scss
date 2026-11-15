@@ -1,0 +1,116 @@
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  // Dark theme by default (spec §9). Orange = effort, green = terrain.
+  color-scheme: dark;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$orange-palette,
+        tertiary: mat.$green-palette,
+        theme-type: dark,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+.page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 599px) {
+  .page {
+    padding: 16px;
+  }
+}
+
+// ---- MapLibre elements created outside Angular templates
+.waypoint-marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font:
+    700 13px/1 Roboto,
+    sans-serif;
+  color: #fff;
+  background: #6a1b9a;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  &.start {
+    background: #2e7d32;
+  }
+  &.end {
+    background: #c62828;
+  }
+}
+.maplibregl-popup-content {
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  .road-popup strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--mat-sys-surface-container-high) !important;
+  border-bottom-color: var(--mat-sys-surface-container-high) !important;
+}
+.maplibregl-popup-close-button {
+  color: var(--mat-sys-on-surface);
+}
+
+/* Rider on the ride map (MapLibre marker, created outside Angular; MapLibre positions it absolutely). */
+.rider-marker svg {
+  transition: transform 0.3s;
+}
+.rider-marker[data-state='PEE_BREAK'] svg {
+  transform: translateX(14px) scale(0.85);
+}
+.rider-marker[data-state='PEE_BREAK']::after {
+  content: '💧';
+  position: absolute;
+  left: 34px;
+  top: -8px;
+  font-size: 16px;
+}
+.rider-marker[data-state='CRASHED'] circle,
+.rider-marker[data-state='RECOVERING'] circle {
+  fill: #c62828;
+}
+.rider-marker[data-state='CRASHED']::after {
+  content: '✦';
+  position: absolute;
+  left: 30px;
+  top: -6px;
+  color: #ffd54f;
+  font-size: 18px;
+}
+.rider-marker[data-state='PAUSED'] {
+  opacity: 0.6;
+}

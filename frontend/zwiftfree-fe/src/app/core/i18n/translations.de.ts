@@ -1,0 +1,55 @@
+import { PartialTranslations } from './translations.it';
+
+/** German UI strings. Missing keys fall back to Italian. */
+export const DE: PartialTranslations = {
+  nav: {
+    home: 'Start',
+    ride: 'Fahren',
+    routes: 'Strecken',
+    stats: 'Statistiken',
+    history: 'Verlauf',
+    account: 'Konto',
+    settings: 'Einstellungen',
+  },
+  user: { logout: 'Abmelden' },
+  common: { save: 'Speichern', cancel: 'Abbrechen' },
+  hud: {
+    power: 'Leistung',
+    speed: 'Tempo',
+    grade: 'Steigung',
+    cadence: 'Trittfrequenz',
+    heartRate: 'Puls',
+    distance: 'Distanz',
+    toGo: 'noch {km} km',
+    ascent: 'Höhenmeter',
+    time: 'Zeit',
+  },
+  turn: { LEFT: 'Links', STRAIGHT: 'Geradeaus', RIGHT: 'Rechts', U_TURN: 'Wenden' },
+  sim: {
+    title: 'Simulator',
+    trainerGrade: 'Rolle',
+    power: 'Simulierte Leistung',
+    less: '−10 W',
+    more: '+10 W',
+  },
+  explored: {
+    mode: 'Erkundete Strassen',
+    percent: 'Du bist {p}% der Tessiner Strassen gefahren',
+    detail: '{km} km von {total} km',
+    none: 'Noch keine Strassen erkundet: los geht’s!',
+  },
+  stats: {
+    periods: { week: 'Woche', month: 'Monat', year: 'Jahr', all: 'Immer' },
+    rides: 'Fahrten',
+    distance: 'Distanz',
+    time: 'Fahrzeit',
+    ascent: 'Höhenmeter',
+    load: 'Trainingsbelastung',
+    powerCurve: 'Leistungskurve',
+    records: 'Persönliche Rekorde',
+    fun: 'Lustige Zähler',
+    peeBreaks: 'Pinkelpausen',
+    crashes: 'Stürze',
+    ceneri: 'Ceneri bezwungen',
+  },
+};
