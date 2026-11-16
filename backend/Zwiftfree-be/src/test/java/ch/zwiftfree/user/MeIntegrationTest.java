@@ -1,5 +1,6 @@
 package ch.zwiftfree.user;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,8 +9,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ch.zwiftfree.IntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 class MeIntegrationTest extends IntegrationTest {
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private static final String VALID_PROFILE = """
             {"displayName":"Lucia","weightKg":62.5,"heightCm":168,"birthYear":1990,"ftpWatts":240,
@@ -26,7 +35,10 @@ class MeIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.settings.peeBreakEnabled").value(true))
                 .andExpect(jsonPath("$.settings.peeBreakAfterSeconds").value(20))
                 .andExpect(jsonPath("$.settings.crashEventsEnabled").value(true))
-                .andExpect(jsonPath("$.settings.trainerDifficulty").value(1.0));
+                .andExpect(jsonPath("$.settings.trainerDifficulty").value(1.0))
+                .andExpect(jsonPath("$.settings.rideView").value("MAP_2D"))
+                .andExpect(jsonPath("$.settings.headBobEnabled").value(false))
+                .andExpect(jsonPath("$.settings.sceneQuality").value("MEDIUM"));
     }
 
     @Test
@@ -68,6 +80,71 @@ class MeIntegrationTest extends IntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.peeBreakAfterSeconds").value("Minimo 5 secondi"))
                 .andExpect(jsonPath("$.errors.trainerDifficulty").value("Difficoltà tra 0 e 1"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"MAP_2D,LOW,false", "THIRD_PERSON,MEDIUM,false", "FIRST_PERSON,HIGH,true"})
+    void rideDisplaySettingsPersist(String view, String quality, boolean bob) throws Exception {
+        Session s = register();
+        authedJson(put("/api/me/settings"), s, settingsWithDisplay(view, quality, bob))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.rideView").value(view))
+                .andExpect(jsonPath("$.settings.headBobEnabled").value(bob))
+                .andExpect(jsonPath("$.settings.sceneQuality").value(quality));
+        me(s).andExpect(jsonPath("$.settings.rideView").value(view))
+                .andExpect(jsonPath("$.settings.headBobEnabled").value(bob))
+                .andExpect(jsonPath("$.settings.sceneQuality").value(quality));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"INVALID,HIGH,rideView", "first_person,HIGH,rideView", "FIRST_PERSON,ULTRA,sceneQuality",
+            "FIRST_PERSON,high,sceneQuality"})
+    void invalidRideDisplaySettingsAreRejected(String view, String quality, String field) throws Exception {
+        Session s = register();
+        authedJson(put("/api/me/settings"), s, settingsWithDisplay(view, quality, true))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors." + field).isString());
+        me(s).andExpect(jsonPath("$.settings.rideView").value("MAP_2D"))
+                .andExpect(jsonPath("$.settings.headBobEnabled").value(false))
+                .andExpect(jsonPath("$.settings.sceneQuality").value("MEDIUM"));
+    }
+
+    @Test
+    void olderSettingsRequestsPreserveRideDisplayPreferences() throws Exception {
+        Session s = register();
+        authedJson(put("/api/me/settings"), s, settingsWithDisplay("FIRST_PERSON", "HIGH", true))
+                .andExpect(status().isOk());
+        authedJson(put("/api/me/settings"), s, """
+                {"peeBreakEnabled":false,"peeBreakAfterSeconds":45,"crashEventsEnabled":false,
+                 "trainerDifficulty":0.5,"audioEnabled":false,"cornerAssistEnabled":true}""")
+                .andExpect(status().isOk());
+        me(s).andExpect(jsonPath("$.settings.rideView").value("FIRST_PERSON"))
+                .andExpect(jsonPath("$.settings.headBobEnabled").value(true))
+                .andExpect(jsonPath("$.settings.sceneQuality").value("HIGH"));
+        // A false value must still be applied; it is distinct from an omitted Boolean.
+        authedJson(put("/api/me/settings"), s, settingsWithDisplay("FIRST_PERSON", "HIGH", false))
+                .andExpect(status().isOk());
+        me(s).andExpect(jsonPath("$.settings.headBobEnabled").value(false));
+    }
+
+    @Test
+    void databaseRejectsUnknownRideViewAndSceneQuality() throws Exception {
+        Session s = register();
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
+                UPDATE user_settings SET ride_view = 'INVALID'
+                WHERE user_id = (SELECT id FROM users WHERE email = ?)""", s.email()));
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
+                UPDATE user_settings SET scene_quality = 'ULTRA'
+                WHERE user_id = (SELECT id FROM users WHERE email = ?)""", s.email()));
+        me(s).andExpect(jsonPath("$.settings.rideView").value("MAP_2D"))
+                .andExpect(jsonPath("$.settings.sceneQuality").value("MEDIUM"));
+    }
+
+    private static String settingsWithDisplay(String view, String quality, boolean bob) {
+        return """
+                {"peeBreakEnabled":true,"peeBreakAfterSeconds":20,"crashEventsEnabled":true,
+                 "trainerDifficulty":1,"audioEnabled":true,"cornerAssistEnabled":false,
+                 "rideView":"%s","headBobEnabled":%s,"sceneQuality":"%s"}""".formatted(view, bob, quality);
     }
 
     @Test

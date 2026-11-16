@@ -72,7 +72,12 @@ export interface Hud {
 export interface FramePosition {
   lon: number;
   lat: number;
+  ele: number;
   heading: number;
+  cameraHeading: number;
+  grade: number;
+  lookAhead: { lon: number; lat: number; ele: number };
+  firstLookAhead: { lon: number; lat: number; ele: number };
   distanceM: number;
 }
 
@@ -396,7 +401,17 @@ export class RideSession {
     const alpha = (performance.now() - this.lastTickAt) / TICK_MS;
     const d = this.phase() === 'riding' ? e.renderDistance(alpha) : e.distance;
     const p = e.course.pointAt(d);
-    return { lon: p.lon, lat: p.lat, heading: e.course.headingAt(d), distanceM: d };
+    return {
+      lon: p.lon,
+      lat: p.lat,
+      ele: p.ele,
+      heading: e.course.headingAt(d),
+      cameraHeading: e.course.headingAt(d, 20),
+      grade: e.course.gradeAt(d),
+      lookAhead: e.course.pointAt(Math.min(e.course.lengthM, d + 18)),
+      firstLookAhead: e.course.pointAt(Math.min(e.course.lengthM, d + 14)),
+      distanceM: d,
+    };
   }
 
   togglePause(): void {

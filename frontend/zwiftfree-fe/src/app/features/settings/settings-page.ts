@@ -13,7 +13,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DatePipe } from '@angular/common';
 import { applyFieldErrors, problemMessage } from '../../core/api/problem';
-import { Me, Units } from '../../core/auth/auth.models';
+import { Me, RideView, SceneQuality, Units } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { MeService } from '../../core/auth/me.service';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -60,6 +60,9 @@ export class SettingsPage {
     peeBreakAfterSeconds: [20, [Validators.required, Validators.min(5), Validators.max(600)]],
     crashEventsEnabled: [true],
     cornerAssistEnabled: [false],
+    rideView: ['MAP_2D' as RideView, Validators.required],
+    headBobEnabled: [{ value: false, disabled: true }],
+    sceneQuality: ['MEDIUM' as SceneQuality, Validators.required],
   });
 
   protected readonly saving = signal(false);
@@ -70,6 +73,11 @@ export class SettingsPage {
       const c = this.form.controls.peeBreakAfterSeconds;
       if (on) c.enable({ emitEvent: false });
       else c.disable({ emitEvent: false });
+    });
+    this.form.controls.rideView.valueChanges.pipe(takeUntilDestroyed()).subscribe((view) => {
+      const bob = this.form.controls.headBobEnabled;
+      if (view === 'FIRST_PERSON') bob.enable({ emitEvent: false });
+      else bob.disable({ emitEvent: false });
     });
     const me = this.auth.me();
     if (me) this.fill(me);
@@ -95,6 +103,9 @@ export class SettingsPage {
         peeBreakAfterSeconds: v.peeBreakAfterSeconds,
         crashEventsEnabled: v.crashEventsEnabled,
         cornerAssistEnabled: v.cornerAssistEnabled,
+        rideView: v.rideView,
+        headBobEnabled: v.headBobEnabled,
+        sceneQuality: v.sceneQuality,
       });
       if (v.units !== me.profile.units) updated = await this.meService.updateUnits(v.units);
       this.fill(updated);
@@ -116,6 +127,9 @@ export class SettingsPage {
       peeBreakAfterSeconds: s.peeBreakAfterSeconds,
       crashEventsEnabled: s.crashEventsEnabled,
       cornerAssistEnabled: s.cornerAssistEnabled,
+      rideView: s.rideView ?? 'MAP_2D',
+      headBobEnabled: s.headBobEnabled ?? false,
+      sceneQuality: s.sceneQuality ?? 'MEDIUM',
     });
   }
 }

@@ -34,6 +34,18 @@
   position: absolute;
   inset: 0;
 }
+.view-notice {
+  position: absolute;
+  top: 100px;
+  left: 8px;
+  z-index: 4;
+  max-width: min(340px, calc(100% - 32px));
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  box-shadow: 0 2px 8px #0006;
+}
 .overlay {
   position: absolute;
   inset: 0;

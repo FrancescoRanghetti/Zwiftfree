@@ -63,6 +63,40 @@
         </mat-card-content>
       </mat-card>
 
+      <mat-card appearance="outlined" data-testid="ride-view-settings">
+        <mat-card-header>
+          <mat-card-title>{{ 'settings.rideView' | t }}</mat-card-title>
+          <mat-card-subtitle>{{ 'settings.rideViewHint' | t }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="toggles">
+          <mat-radio-group
+            class="view-options"
+            formControlName="rideView"
+            [attr.aria-label]="'settings.rideView' | t"
+          >
+            <mat-radio-button value="MAP_2D">{{ 'settings.views.MAP_2D' | t }}</mat-radio-button>
+            <mat-radio-button value="THIRD_PERSON">{{
+              'settings.views.THIRD_PERSON' | t
+            }}</mat-radio-button>
+            <mat-radio-button value="FIRST_PERSON">{{
+              'settings.views.FIRST_PERSON' | t
+            }}</mat-radio-button>
+          </mat-radio-group>
+          <mat-slide-toggle formControlName="headBobEnabled" data-testid="head-bob-toggle">
+            {{ 'settings.headBob' | t }}
+          </mat-slide-toggle>
+          <p class="muted">{{ 'settings.headBobHint' | t }}</p>
+          <span id="scene-quality-label">{{ 'settings.sceneQuality' | t }}</span>
+          <mat-radio-group formControlName="sceneQuality" aria-labelledby="scene-quality-label">
+            <mat-radio-button value="LOW">{{ 'settings.qualities.LOW' | t }}</mat-radio-button>
+            <mat-radio-button value="MEDIUM">{{
+              'settings.qualities.MEDIUM' | t
+            }}</mat-radio-button>
+            <mat-radio-button value="HIGH">{{ 'settings.qualities.HIGH' | t }}</mat-radio-button>
+          </mat-radio-group>
+        </mat-card-content>
+      </mat-card>
+
       <mat-card appearance="outlined">
         <mat-card-header>
           <mat-card-title>{{ 'settings.avatarEvents' | t }}</mat-card-title>

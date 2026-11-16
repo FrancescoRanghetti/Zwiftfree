@@ -25,6 +25,7 @@ import { RoutesApi } from '../../core/api/roads.api';
 import { Place } from '../../core/api/roads.models';
 import { problemMessage } from '../../core/api/problem';
 import { AuthService } from '../../core/auth/auth.service';
+import { RideView } from '../../core/auth/auth.models';
 import { MeService } from '../../core/auth/me.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { RideIntent, RideIntentService } from '../../core/ride/ride-intent.service';
@@ -36,6 +37,7 @@ import { formatKm, formatM } from '../../shared/grade';
 import { PlaceSearch } from '../routes/place-search';
 import { RideHud } from './ride-hud';
 import { RideMap } from './ride-map';
+import { RideScene3d } from './ride-scene-3d';
 import { RideSession, formatDuration } from './ride-session';
 import { DeviceStatusService } from '../../devices/device-status.service';
 import { DevicePicker } from './device-picker';
@@ -63,6 +65,7 @@ import { TurnArrows } from './turn-arrows';
     PlaceSearch,
     RideHud,
     RideMap,
+    RideScene3d,
     SimPanel,
     TurnArrows,
     DevicePicker,
@@ -87,6 +90,19 @@ export class RidePage {
 
   protected readonly followHeading = signal(true);
   protected readonly lockZoom = signal(true);
+  private readonly viewOverride = signal<RideView | null>(null);
+  protected readonly rideView = computed(
+    () => this.viewOverride() ?? this.auth.me()?.settings.rideView ?? 'MAP_2D',
+  );
+  protected readonly sceneQuality = computed(
+    () => this.auth.me()?.settings.sceneQuality ?? 'MEDIUM',
+  );
+  protected readonly headBobEnabled = computed(
+    () => this.auth.me()?.settings.headBobEnabled ?? false,
+  );
+  protected readonly viewNotice = signal<'ride.sceneTooSlow' | 'ride.sceneUnavailable' | null>(
+    null,
+  );
   protected readonly confirmEnd = signal(false);
   protected readonly starting = signal(false);
   protected readonly startError = signal<string | null>(null);
@@ -208,11 +224,38 @@ export class RidePage {
     void this.session.finish();
   }
 
+  /** A view change applies only to this ride; the saved preference belongs to Settings. */
+  protected cycleView(): void {
+    const next: Record<RideView, RideView> = {
+      MAP_2D: 'THIRD_PERSON',
+      THIRD_PERSON: 'FIRST_PERSON',
+      FIRST_PERSON: 'MAP_2D',
+    };
+    this.viewOverride.set(next[this.rideView()]);
+    this.viewNotice.set(null);
+  }
+
+  protected fallbackToMap(reason: 'performance' | 'unavailable'): void {
+    this.viewOverride.set('MAP_2D');
+    this.viewNotice.set(reason === 'performance' ? 'ride.sceneTooSlow' : 'ride.sceneUnavailable');
+  }
+
   /** ←/→ choose a turn, ↑ goes straight when arrows are shown (otherwise +10 W), ↓ −10 W, space pauses. */
   protected onKey(e: KeyboardEvent): void {
-    if (this.session.phase() !== 'riding') return;
     const target = e.target as HTMLElement | null;
-    if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+    if (
+      target &&
+      (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)
+    )
+      return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const phase = this.session.phase();
+    if (e.key.toLowerCase() === 'v' && (phase === 'ready' || phase === 'riding')) {
+      if (!e.repeat) this.cycleView();
+      e.preventDefault();
+      return;
+    }
+    if (phase !== 'riding') return;
     const choices = this.session.choices();
     const key = e.key;
     if (key === 'ArrowLeft' || key === 'ArrowRight' || (key === 'ArrowUp' && choices.length)) {

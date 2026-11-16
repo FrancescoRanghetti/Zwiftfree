@@ -1,10 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { Coord3, RouteDetail } from '../../core/api/roads.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { RideView, SceneQuality } from '../../core/auth/auth.models';
 import { ME } from '../../core/auth/testing';
 import { RideIntentService } from '../../core/ride/ride-intent.service';
 import { crossroads, line, NODES } from '../../physics/testing';
@@ -12,6 +14,7 @@ import { BLUETOOTH } from '../../devices/device-manager.service';
 import { fakeFtmsTrainer } from '../../devices/ble/fake-ble';
 import { ElevationProfile } from '../../shared/elevation-profile/elevation-profile';
 import { RideMap } from './ride-map';
+import { RideScene3d } from './ride-scene-3d';
 import { RidePage } from './ride-page';
 import { RideSession } from './ride-session';
 import { LivePosition, LiveService } from '../../core/live/live.service';
@@ -24,6 +27,18 @@ import { LivePosition, LiveService } from '../../core/live/live.service';
 class MapStub {
   readonly followHeading = input(true);
   readonly lockZoom = input(true);
+}
+
+@Component({
+  selector: 'app-ride-scene-3d',
+  template: '<canvas data-testid="scene-canvas"></canvas>',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SceneStub {
+  readonly view = input.required<Exclude<RideView, 'MAP_2D'>>();
+  readonly quality = input<SceneQuality>('MEDIUM');
+  readonly headBobEnabled = input(false);
+  readonly fallback = output<'performance' | 'unavailable'>();
 }
 
 @Component({
@@ -120,8 +135,8 @@ describe('RidePage', () => {
       ],
     })
       .overrideComponent(RidePage, {
-        remove: { imports: [RideMap, ElevationProfile] },
-        add: { imports: [MapStub, ProfileStub] },
+        remove: { imports: [RideMap, RideScene3d, ElevationProfile] },
+        add: { imports: [MapStub, SceneStub, ProfileStub] },
       })
       .compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -148,6 +163,119 @@ describe('RidePage', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="ride-chooser"]')).not.toBeNull();
     expect(el.querySelectorAll('[data-testid="choose-route"]').length).toBe(1);
+  });
+
+  async function prepareRoute() {
+    TestBed.inject(RideIntentService).set({ kind: 'route', routeId: 'r1', name: 'Salitella' });
+    const fixture = TestBed.createComponent(RidePage);
+    TestBed.tick();
+    http.expectOne('/api/routes').flush([]);
+    http.expectOne('/api/routes/r1').flush(DETAIL);
+    await settle();
+    http.expectOne((r) => r.url === '/api/roads/area').flush(crossroads());
+    http.expectOne('/api/places/all').flush([]);
+    await settle();
+    return fixture;
+  }
+
+  it('defaults to 2D and cycles the ready view with the button and V without saving settings', async () => {
+    const fixture = await prepareRoute();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-ride-map')).not.toBeNull();
+    el.querySelector<HTMLButtonElement>('[data-testid="cycle-view"]')!.click();
+    await settle();
+    const scene = fixture.debugElement.query(By.directive(SceneStub))
+      .componentInstance as SceneStub;
+    expect(scene.view()).toBe('THIRD_PERSON');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', bubbles: true }));
+    await settle();
+    expect(scene.view()).toBe('FIRST_PERSON');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'V', bubbles: true }));
+    await settle();
+    expect(el.querySelector('app-ride-map')).not.toBeNull();
+    expect(el.querySelector('app-ride-scene-3d')).toBeNull();
+    http.expectNone('/api/me/settings');
+    expect(TestBed.inject(AuthService).me()?.settings.rideView).toBe('MAP_2D');
+  });
+
+  it.each(['THIRD_PERSON', 'FIRST_PERSON'] as const)(
+    'uses the saved %s view and 3D preferences before starting',
+    async (view) => {
+      TestBed.inject(AuthService).setMe({
+        ...ME,
+        settings: { ...ME.settings, rideView: view, sceneQuality: 'HIGH', headBobEnabled: true },
+      });
+      const fixture = await prepareRoute();
+      const scene = fixture.debugElement.query(By.directive(SceneStub))
+        .componentInstance as SceneStub;
+      expect(scene.view()).toBe(view);
+      expect(scene.quality()).toBe('HIGH');
+      expect(scene.headBobEnabled()).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-testid="preride"]')).not.toBeNull();
+    },
+  );
+
+  it('ignores V in editable fields, modified shortcuts and key repeats', async () => {
+    const fixture = await prepareRoute();
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector('input')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'v', bubbles: true }),
+    );
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'v', ctrlKey: true, bubbles: true }),
+    );
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', repeat: true, bubbles: true }));
+    await settle();
+    expect(el.querySelector('app-ride-map')).not.toBeNull();
+  });
+
+  it.each(['performance', 'unavailable'] as const)(
+    'falls back to 2D on %s while keeping the saved preference',
+    async (reason) => {
+      TestBed.inject(AuthService).setMe({
+        ...ME,
+        settings: { ...ME.settings, rideView: 'THIRD_PERSON' },
+      });
+      const fixture = await prepareRoute();
+      const scene = fixture.debugElement.query(By.directive(SceneStub))
+        .componentInstance as SceneStub;
+      scene.fallback.emit(reason);
+      await settle();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('app-ride-map')).not.toBeNull();
+      expect(el.querySelector('[data-testid="view-fallback"]')?.textContent).toContain(
+        reason === 'performance' ? 'troppo pesante' : 'non è disponibile',
+      );
+      expect(TestBed.inject(AuthService).me()?.settings.rideView).toBe('THIRD_PERSON');
+      http.expectNone('/api/me/settings');
+    },
+  );
+
+  it('changes the view with V during a ride while retaining the HUD and simulator', async () => {
+    const fixture = await prepareRoute();
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('[data-testid="start-ride"]')!.click();
+    await settle();
+    http.expectOne('/api/rides').flush({ id: 'view-ride', status: 'IN_PROGRESS' });
+    await settle();
+    http.expectOne('/api/stats/records').flush([]);
+    const session = fixture.debugElement.injector.get(RideSession);
+    session.simulator.setPower(220);
+    await vi.advanceTimersByTimeAsync(1500);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', bubbles: true }));
+    await settle();
+    expect(el.querySelector('[data-testid="scene-canvas"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="hud-power"]')?.textContent).toContain('220');
+    expect(el.querySelector('app-sim-panel')).not.toBeNull();
+    expect(el.querySelector('app-avatar-rider')).not.toBeNull();
+    expect(el.querySelector('app-elevation-profile')).not.toBeNull();
+    const frame = session.position()!;
+    expect(frame.ele).toBeGreaterThanOrEqual(200);
+    expect(frame.lookAhead.lat).toBeGreaterThan(frame.lat);
+    expect(frame.firstLookAhead.lat).toBeLessThan(frame.lookAhead.lat);
+    expect(frame.cameraHeading).toBeGreaterThanOrEqual(0);
+    http.expectNone('/api/me/settings');
+    fixture.destroy();
   });
 
   it('rides a planned route with the simulator, uploads samples and opens the summary', async () => {

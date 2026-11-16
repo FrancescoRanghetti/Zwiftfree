@@ -12,6 +12,8 @@ export interface AvatarConfig {
 }
 
 export type Units = 'metric' | 'imperial';
+export type RideView = 'MAP_2D' | 'THIRD_PERSON' | 'FIRST_PERSON';
+export type SceneQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface Profile {
   weightKg: number;
@@ -34,6 +36,9 @@ export interface Settings {
   trainerDifficulty: number;
   audioEnabled: boolean;
   cornerAssistEnabled: boolean;
+  rideView: RideView;
+  headBobEnabled: boolean;
+  sceneQuality: SceneQuality;
 }
 
 export interface Me {

@@ -25,6 +25,9 @@ export const ME: Me = {
     trainerDifficulty: 1,
     audioEnabled: true,
     cornerAssistEnabled: false,
+    rideView: 'MAP_2D',
+    headBobEnabled: false,
+    sceneQuality: 'MEDIUM',
   },
 };
 

@@ -49,7 +49,10 @@ public final class MeDtos {
             boolean crashEventsEnabled,
             BigDecimal trainerDifficulty,
             boolean audioEnabled,
-            boolean cornerAssistEnabled) {
+            boolean cornerAssistEnabled,
+            String rideView,
+            boolean headBobEnabled,
+            String sceneQuality) {
     }
 
     public record MeResponse(
@@ -82,7 +85,10 @@ public final class MeDtos {
             boolean crashEventsEnabled,
             @NotNull @DecimalMin(value = "0", message = "Difficoltà tra 0 e 1") @DecimalMax(value = "1", message = "Difficoltà tra 0 e 1") BigDecimal trainerDifficulty,
             boolean audioEnabled,
-            boolean cornerAssistEnabled) {
+            boolean cornerAssistEnabled,
+            @Pattern(regexp = "MAP_2D|THIRD_PERSON|FIRST_PERSON", message = "Visuale della pedalata non valida") String rideView,
+            Boolean headBobEnabled,
+            @Pattern(regexp = "LOW|MEDIUM|HIGH", message = "Qualità 3D non valida") String sceneQuality) {
     }
 
     public record PasswordChange(
