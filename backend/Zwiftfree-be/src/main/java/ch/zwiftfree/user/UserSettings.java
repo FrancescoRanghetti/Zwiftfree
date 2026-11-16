@@ -33,6 +33,15 @@ public class UserSettings {
     @Column(name = "corner_assist_enabled", nullable = false)
     private boolean cornerAssistEnabled = false;
 
+    @Column(name = "ride_view", nullable = false)
+    private String rideView = "MAP_2D";
+
+    @Column(name = "head_bob_enabled", nullable = false)
+    private boolean headBobEnabled = false;
+
+    @Column(name = "scene_quality", nullable = false)
+    private String sceneQuality = "MEDIUM";
+
     protected UserSettings() {
     }
 
@@ -90,5 +99,29 @@ public class UserSettings {
 
     public void setCornerAssistEnabled(boolean cornerAssistEnabled) {
         this.cornerAssistEnabled = cornerAssistEnabled;
+    }
+
+    public String getRideView() {
+        return rideView;
+    }
+
+    public void setRideView(String rideView) {
+        this.rideView = rideView;
+    }
+
+    public boolean isHeadBobEnabled() {
+        return headBobEnabled;
+    }
+
+    public void setHeadBobEnabled(boolean headBobEnabled) {
+        this.headBobEnabled = headBobEnabled;
+    }
+
+    public String getSceneQuality() {
+        return sceneQuality;
+    }
+
+    public void setSceneQuality(String sceneQuality) {
+        this.sceneQuality = sceneQuality;
     }
 }

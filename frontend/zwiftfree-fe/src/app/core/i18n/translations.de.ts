@@ -25,6 +25,26 @@ export const DE: PartialTranslations = {
     time: 'Zeit',
   },
   turn: { LEFT: 'Links', STRAIGHT: 'Geradeaus', RIGHT: 'Rechts', U_TURN: 'Wenden' },
+  ride: {
+    changeView: 'Ansicht wechseln (V)',
+    currentView: 'Ansicht: {view}. Ansicht wechseln (V)',
+    sceneLoading: '3D-Ansicht wird geladen…',
+    sceneUnavailable: 'Die 3D-Ansicht ist auf diesem Gerät nicht verfügbar: zurück zur 2D-Karte',
+    sceneTooSlow: '3D ist für dieses Gerät zu aufwendig: zurück zur 2D-Karte',
+  },
+  settings: {
+    rideView: 'Fahransicht',
+    rideViewHint: 'Mit V wechselst du die Ansicht, ohne diese Einstellung zu ändern.',
+    views: {
+      MAP_2D: '2D (Karte)',
+      THIRD_PERSON: '3D — dritte Person',
+      FIRST_PERSON: '3D — erste Person',
+    },
+    headBob: 'Kopfbewegung',
+    headBobHint: 'Nur in der ersten Person. Standardmässig ausgeschaltet.',
+    sceneQuality: '3D-Qualität',
+    qualities: { LOW: 'Niedrig', MEDIUM: 'Mittel', HIGH: 'Hoch' },
+  },
   sim: {
     title: 'Simulator',
     trainerGrade: 'Rolle',

@@ -16,6 +16,7 @@ import { Coord3 } from '../../core/api/roads.models';
 import { TurnChoice } from '../../physics/junctions';
 import { TICINO_MAX_BOUNDS, emptyLine, lineFeature, ticinoStyle } from '../../shared/map/map-style';
 import { FramePosition, RideSession } from './ride-session';
+import { RasterRideMap } from './scene3d/raster-map';
 
 /** Zoom used while the zoom is locked: close enough to read the junction ahead. */
 export const RIDE_ZOOM = 16;
@@ -68,11 +69,17 @@ export class RideMap {
   private loaded = false;
   private markerEl: HTMLElement | null = null;
   private stopFrames: (() => void) | null = null;
+  private destroyed = false;
+  private raster: RasterRideMap | null = null;
+  private stopContextLost: (() => void) | null = null;
 
   constructor() {
     afterNextRender(() => void this.init());
     inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
       this.stopFrames?.();
+      this.stopContextLost?.();
+      this.raster?.destroy();
       this.map?.remove();
     });
     effect(() => this.setLine('planned', this.session.plannedLine()));
@@ -94,7 +101,23 @@ export class RideMap {
   }
 
   private async init(): Promise<void> {
+    try {
+      const probe = document.createElement('canvas');
+      const gl = probe.getContext('webgl2');
+      if (!gl) {
+        this.useRaster();
+        return;
+      }
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      await this.initMapLibre();
+    } catch {
+      this.useRaster();
+    }
+  }
+
+  private async initMapLibre(): Promise<void> {
     const lib = await import('maplibre-gl');
+    if (this.destroyed) return;
     lib.setWorkerUrl(`${location.origin}/maplibre/maplibre-gl-worker.mjs`);
     const start = this.session.position();
     this.zone.runOutsideAngular(() => {
@@ -131,6 +154,15 @@ export class RideMap {
         maxBounds: TICINO_MAX_BOUNDS as [number, number, number, number],
         attributionControl: { compact: false },
       });
+      this.map = map;
+      const canvas = map.getCanvas();
+      const contextLost = (event: Event) => {
+        event.preventDefault();
+        // Destroy the WebGL renderer after its current event callback completes.
+        queueMicrotask(() => this.useRaster());
+      };
+      canvas.addEventListener('webglcontextlost', contextLost);
+      this.stopContextLost = () => canvas.removeEventListener('webglcontextlost', contextLost);
       map.addControl(new lib.NavigationControl({ visualizePitch: true }), 'top-right');
       const el = document.createElement('div');
       el.className = 'rider-marker';
@@ -142,18 +174,46 @@ export class RideMap {
         .setLngLat(start ? [start.lon, start.lat] : [8.95, 46.2])
         .addTo(map);
       map.on('load', () => {
+        if (this.destroyed || this.raster) return;
         this.loaded = true;
         this.setLine('planned', this.session.plannedLine());
         this.setLine('ridden', this.session.riddenLine());
         this.showChoices(this.session.choices(), this.session.selected());
         if (start) this.follow(start);
       });
-      this.map = map;
+      this.stopFrames = this.session.onFrame((p) => this.follow(p));
+    });
+  }
+
+  private useRaster(): void {
+    if (this.destroyed || this.raster) return;
+    this.zone.runOutsideAngular(() => {
+      this.stopFrames?.();
+      this.stopContextLost?.();
+      this.stopContextLost = null;
+      this.map?.remove();
+      this.map = null;
+      this.loaded = false;
+      this.marker = null;
+      const container = this.container().nativeElement;
+      container.replaceChildren();
+      this.raster = new RasterRideMap(container, RIDE_ZOOM);
+      this.markerEl = this.raster.marker;
+      this.markerEl.setAttribute('data-state', this.session.hud().state);
+      this.setLine('planned', this.session.plannedLine());
+      this.setLine('ridden', this.session.riddenLine());
+      this.showChoices(this.session.choices(), this.session.selected());
+      const start = this.session.position();
+      if (start) this.follow(start);
       this.stopFrames = this.session.onFrame((p) => this.follow(p));
     });
   }
 
   private follow(p: FramePosition): void {
+    if (this.raster) {
+      this.raster.follow(p, this.followHeading());
+      return;
+    }
     const map = this.map;
     if (!map) return;
     this.marker?.setLngLat([p.lon, p.lat]).setRotation(p.heading);
@@ -165,6 +225,7 @@ export class RideMap {
   }
 
   private setLine(source: 'planned' | 'ridden', coords: Coord3[] | null): void {
+    this.raster?.setLine(source, coords);
     if (!this.loaded || !this.map) return;
     const src = this.map.getSource(source === 'planned' ? 'route' : 'ridden') as GeoJSONSource;
     src?.setData(coords && coords.length > 1 ? lineFeature(coords) : emptyLine());
@@ -172,6 +233,7 @@ export class RideMap {
 
   /** The first ~120 m of each way out of the coming junction; the selected one is highlighted. */
   private showChoices(choices: TurnChoice[], selected: number): void {
+    this.raster?.showChoices(choices, selected);
     if (!this.loaded || !this.map) return;
     const fc: FeatureCollection = {
       type: 'FeatureCollection',

@@ -17,7 +17,7 @@ Authenticated endpoints need `Authorization: Bearer <accessToken>`; without it t
 | POST | `/api/auth/logout` | – | `{ refreshToken }` → `204` |
 | GET | `/api/me` | ✓ | `{ id, email, displayName, createdAt, profile, settings }` |
 | PUT | `/api/me/profile` | ✓ | display name, physical data, units, `avatar { jerseyColor, helmetColor, bikeColor }` → me |
-| PUT | `/api/me/settings` | ✓ | pee break on/after seconds, crashes, trainer difficulty 0–1, audio, corner assist → me |
+| PUT | `/api/me/settings` | ✓ | pee break on/after seconds, crashes, trainer difficulty 0–1, audio, corner assist, ride view, head bob, 3D quality → me |
 | PUT | `/api/me/password` | ✓ | `{ currentPassword, newPassword }` → new token pair; ends every other session |
 | DELETE | `/api/me` | ✓ | `{ password }` → `204`; deletes the user and all their data |
 | GET | `/api/tiles/roads/{z}/{x}/{y}.mvt` | – | Road network vector tile (layer `roads`: id, name, highway, rank, steepest, length_m, ascent_m, descent_m, oneway); cached 1 day |
@@ -53,6 +53,18 @@ Authenticated endpoints need `Authorization: Bearer <accessToken>`; without it t
 Rides are private: another user's ride id answers `404` on every endpoint.
 
 Validation errors: `400` with `errors: { "field": "messaggio" }` (nested fields use dots, e.g. `avatar.jerseyColor`).
+
+Ride display preferences in `settings`:
+
+| Field | Values | Default |
+| --- | --- | --- |
+| `rideView` | `MAP_2D`, `THIRD_PERSON`, `FIRST_PERSON` | `MAP_2D` |
+| `headBobEnabled` | boolean (only applied in first person) | `false` |
+| `sceneQuality` | `LOW`, `MEDIUM`, `HIGH` | `MEDIUM` |
+
+These three fields may be omitted or null in `PUT /api/me/settings` to preserve their saved values, so older
+clients do not reset 3D preferences. Unrecognised view or quality values return `400` with a field error. The
+ride screen's temporary view switch and automatic 2D fallback do not write these preferences.
 
 This covers the whole surface of the project spec (§5.6 and §10). The interactive version is at
 `/swagger-ui` (OpenAPI at `/v3/api-docs`).

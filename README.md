@@ -96,6 +96,39 @@ SCREENSHOTS=1 npm run e2e           # rigenera anche gli screenshot in docs/scre
 sull'altro dispositivo mostra in diretta potenza, velocità, battito, cadenza, pendenza, distanza, tempo e la
 posizione sulla mappa (WebSocket, un aggiornamento al secondo), e tiene lo schermo acceso.
 
+### Visuale 3D — fase A
+
+In **Impostazioni → Visuale della pedalata** puoi scegliere la mappa 2D (predefinita), la camera 3D dietro il
+ciclista oppure la prima persona. La qualità iniziale è media e l'oscillazione della testa è spenta. Il pulsante
+della visuale e il tasto **V** permettono di cambiare camera prima della partenza e durante la pedalata, senza
+salvare una nuova preferenza. Strumenti, potenza, profilo altimetrico, svolte e riquadro avatar restano gli stessi.
+
+Il 3D richiede **WebGL2**, accelerazione grafica del browser e una connessione Internet: terreno swissALTI3D,
+ortofoto SWISSIMAGE ed edifici swissBUILDINGS3D arrivano direttamente dai servizi pubblici di swisstopo. CesiumJS
+si carica solo quando scegli il 3D; il primo avvio comporta quindi un download aggiuntivo. Non servono account,
+chiavi o token per i servizi geografici. Se il dispositivo non supporta il 3D, l'avvio fallisce o le prestazioni
+rimangono troppo basse, l'app torna alla mappa con un avviso.
+
+La fase A usa dati ospitati: **non occorre scaricare dataset aggiuntivi né lanciare nuovi script in `data/`**.
+Restano per le fasi successive nastro d'asfalto, avatar 3D completo, gallerie, alberi, precaricamento del percorso
+e uso offline. Le quote del percorso e quelle del terreno possono differire: la protezione della camera evita
+di scendere sotto il terreno caricato, ma non sostituisce una conversione geodetica. La fluidità a 60 fps e il
+comfort con Tacx Flux-2 su Cadenazzo – Monte Ceneri richiedono una prova manuale su hardware reale.
+
+Gli URL verificati, le condizioni d'uso e i limiti sono documentati in
+[ARCHITECTURE.md](docs/ARCHITECTURE.md#ride-view-3d-phase-a). I servizi sono soggetti al fair use di geo.admin.ch;
+il loro streaming non è un servizio offline e non ne è garantita la disponibilità.
+
+Il test dedicato usa il renderer Cesium reale con tile sintetiche locali: verifica entrambe le camere, HUD,
+cambio visuale e fallback senza scaricare dati geografici. Richiede lo stack avviato e Chrome installato:
+
+```bash
+cd frontend/zwiftfree-fe
+PW_CHANNEL=chrome npm run e2e -- e2e/ride-3d.e2e.ts
+```
+
+Le eventuali catture `*-synthetic.png` sono prove dell'interfaccia, non immagini del paesaggio ticinese.
+
 I campioni vengono inviati ogni 30 secondi; senza connessione restano nel browser (IndexedDB) e partono appena la
 rete torna, anche alla riapertura dell'app. Le uscite rimaste "non concluse" (finestra chiusa) si chiudono dallo
 storico con *Concludi e salva*.
@@ -128,6 +161,11 @@ Gli screenshot vengono dai test end-to-end (`SCREENSHOTS=1 npm run e2e`).
 ## Attribuzioni e licenze
 
 - Mappe e quote: © [swisstopo](https://www.swisstopo.admin.ch)
+- Terreno 3D, ortofoto SWISSIMAGE ed edifici swissBUILDINGS3D: © swisstopo, con
+  [condizioni OGD](https://www.swisstopo.admin.ch/en/terms-of-use-free-geodata-and-geoservices) e
+  [fair use dei servizi geo.admin.ch](https://www.geo.admin.ch/en/general-terms-of-use-fsdi)
+- Motore 3D: [CesiumJS](https://github.com/CesiumGS/cesium), licenza Apache-2.0. La fase A mantiene il riquadro
+  avatar SVG originale del progetto; non include modelli 3D di terzi.
 - Strade: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), licenza ODbL
 - Export .FIT: [Garmin FIT SDK](https://developer.garmin.com/fit/) (FIT Protocol License)
 - Il routing (pianificatore e percorsi) è calcolato in locale con pgRouting sulla rete OpenStreetMap: nessun servizio

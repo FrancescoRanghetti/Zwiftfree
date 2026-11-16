@@ -3,9 +3,7 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "schematicCollections": [
-      "angular-eslint"
-    ]
+    "schematicCollections": ["angular-eslint"]
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -35,12 +33,29 @@
                 "glob": "maplibre-gl-worker.mjs",
                 "input": "node_modules/maplibre-gl/dist",
                 "output": "maplibre"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/cesium/Build/Cesium/Workers",
+                "output": "cesium/Workers"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/cesium/Build/Cesium/Assets",
+                "output": "cesium/Assets"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/cesium/Build/Cesium/ThirdParty",
+                "output": "cesium/ThirdParty"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/cesium/Build/Cesium/Widgets",
+                "output": "cesium/Widgets"
               }
             ],
-            "styles": [
-              "node_modules/maplibre-gl/dist/maplibre-gl.css",
-              "src/styles.scss"
-            ]
+            "styles": ["node_modules/maplibre-gl/dist/maplibre-gl.css", "src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -84,10 +99,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html"
-            ]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
       }

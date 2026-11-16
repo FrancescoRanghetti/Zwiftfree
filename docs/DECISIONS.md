@@ -347,3 +347,59 @@ Choices not fixed by the spec, the simplest option that works, and why.
   Europe/Zurich; every test creates its own account and deletes it at the end. They cannot cover Web Bluetooth (no
   real devices in a headless browser): the trainer path is covered by the component tests with a fake GATT server
   (milestone 5). The same run can refresh the README screenshots (`SCREENSHOTS=1`).
+
+## 3D view
+
+- **One ride engine, two renderers.** CesiumJS 1.147.0 (npm stable tag verified 2026-11-16) reads the existing
+  course and ride state. It does not change physics, sensor traffic, uploaded samples or the route follower.
+  The 2D map remains the default. Persisted view preferences are distinct from the ride's temporary **V** /
+  button override, so trying another camera never changes the next ride's preference.
+- **Direct hosted swisstopo data for phase A.** Terrain Quantized Mesh, SWISSIMAGE WMTS JPEG and
+  swissBUILDINGS3D 3D Tiles have public, CORS-enabled endpoints. Exact URLs, metadata, verification date and
+  terms are recorded in `ARCHITECTURE.md`. No Cesium ion, Google API, access token or backend proxy is
+  necessary. The word `ion` in swisstopo's published tileset metadata is a producer hint, not a dependency
+  on the ion service. Child tile URLs are resolved from service manifests rather than guessed.
+- **Explicit opt-in loading.** Cesium's runtime is a dynamic import and its supporting assets live under
+  `/cesium/`. No third-party Angular wrapper is added. This keeps the map startup path small and allows
+  renderer teardown to release WebGL resources when returning to 2D.
+- **Keep static assets local and revalidated.** Worker and WebAssembly MIME types are explicit in nginx;
+  missing assets answer 404 instead of the SPA. Cesium assets have unhashed filenames, so they revalidate
+  rather than inheriting the immutable cache policy of hashed application bundles.
+- **Camera follows the route.** Its target is a point ahead on the course, including curves and climbs,
+  rather than a projection along only the current heading. Pure pose and critically damped smoothing
+  functions keep the 10 Hz physics updates independent from rendering. First-person head bob is optional
+  and disabled by default; the existing animated 2D rider panel remains available in phase A.
+  The scene's rear-view SVG cyclist is an original, colored billboard for this first phase. It is replaced
+  by the animated glTF model in phase B, rather than implying that a 2D marker is a complete 3D avatar.
+  Camera FOVs are vertical (60° third person, 73° first person), converted to Cesium's wider-axis convention.
+  During the ride the render viewport reserves the elevation panel's height, so that the panel cannot hide
+  the cyclist. The pre-ride preview uses the full viewport.
+- **Do not confuse height systems.** The downloaded swissALTI3D source is
+  [LV95 / LN02](https://www.swisstopo.admin.ch/en/height-model-swissalti3d), whereas Cesium Cartesian
+  positions use ellipsoidal heights. The terrain service advertises EPSG:4326 and quantized-mesh but its
+  manifest does not explicitly describe a vertical-datum transformation. Phase A preserves road elevations
+  and uses sampled rendered terrain as a lower safety limit for the camera; it never lowers a bridge onto
+  the terrain. This guard is not a geodetic conversion or a guarantee of exact road-to-imagery alignment.
+  A future offline pipeline must transform elevations consistently, including bridges. In particular,
+  swisstopo's approximate `+49.55 …` formula converts Bessel ellipsoidal heights to WGS84 ellipsoidal heights;
+  it is not a substitute for an LN02 geoid transformation. See the official
+  [reference-system formulas, sections 4.2 and 6.1](https://www.swisstopo.admin.ch/dam/en/sd-web/c46Fz-MHIc3u/refsys-EN.pdf)
+  for HTRANS and CHGeo2004 requirements.
+- **Bounded streaming and fallback.** Rendering uses the public service's cache and normal visible-tile
+  selection, without bulk prefetch in phase A. Unsupported WebGL2 or a failed renderer returns to the map;
+  sustained performance below the configured safety threshold also returns to 2D. Headless test rendering
+  is not a GPU performance benchmark. Real-device comfort, true-trainer behavior and 60 fps remain manual
+  acceptance checks.
+- **Hosted vegetation exists.** The verified `ch.swisstopo.vegetation.3d/v1/tileset.json` endpoint means trees
+  can be streamed in a later realism phase. Locally generated instanced trees are useful for offline use
+  rather than a prerequisite for online trees. No geographic data are fetched into the repository; offline
+  download and conversion remain phase C, with explicit user-launched scripts.
+- **A fallback must work without WebGL.** MapLibre 6 also requires WebGL2, so simply selecting that component
+  on a device without WebGL2 would leave a blank map. `RasterRideMap` provides a bounded DOM tile layer and
+  SVG route, ridden track, junction choices and rider marker in this case. It follows the shared ride frames,
+  releases offscreen tile nodes and observers on teardown, and preserves swisstopo attribution. Its fixed
+  zoom and follow-only camera are an emergency mode; MapLibre remains the normal 2D renderer.
+- **Phase boundary.** Phase A supplies hosted terrain, imagery and buildings with both camera modes,
+  settings, existing overlays and map fallback. Asphalt geometry, a fully animated 3D avatar, tunnels,
+  shadows/lighting refinement, route prefetch, trees, offline endpoints and final performance work belong
+  to the subsequent phases in `PROMPT_3D.md`. There is no claim that these later items have been completed.

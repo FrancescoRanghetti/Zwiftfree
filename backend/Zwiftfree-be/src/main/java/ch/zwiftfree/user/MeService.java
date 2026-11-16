@@ -77,6 +77,13 @@ public class MeService {
         s.setTrainerDifficulty(req.trainerDifficulty());
         s.setAudioEnabled(req.audioEnabled());
         s.setCornerAssistEnabled(req.cornerAssistEnabled());
+        // Older clients omit the 3D preferences: preserve the saved values in that case.
+        if (req.rideView() != null)
+            s.setRideView(req.rideView());
+        if (req.headBobEnabled() != null)
+            s.setHeadBobEnabled(req.headBobEnabled());
+        if (req.sceneQuality() != null)
+            s.setSceneQuality(req.sceneQuality());
         return toResponse(user(userId), profile(userId), s);
     }
 
@@ -119,7 +126,8 @@ public class MeService {
                         p.getRestingHr(), p.getBikeWeightKg(), p.getCda(), p.getCrr(), p.getUnits(),
                         fromMap(p.getAvatarConfig())),
                 new SettingsDto(s.isPeeBreakEnabled(), s.getPeeBreakAfterSeconds(), s.isCrashEventsEnabled(),
-                        s.getTrainerDifficulty(), s.isAudioEnabled(), s.isCornerAssistEnabled()));
+                        s.getTrainerDifficulty(), s.isAudioEnabled(), s.isCornerAssistEnabled(), s.getRideView(),
+                        s.isHeadBobEnabled(), s.getSceneQuality()));
     }
 
     private static Map<String, Object> toMap(AvatarConfig a) {

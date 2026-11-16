@@ -32,6 +32,10 @@ mat-card-content {
   flex-direction: column;
   gap: 12px;
 }
+.view-options {
+  display: flex;
+  flex-direction: column;
+}
 .seconds {
   max-width: 220px;
 }

@@ -52,8 +52,22 @@
     }
     @default {
       @let h = session.hud();
+      @let view = rideView();
       <div class="ride" [class.paused]="session.paused()">
-        <app-ride-map class="map" [followHeading]="followHeading()" [lockZoom]="lockZoom()" />
+        @if (view === 'MAP_2D') {
+          <app-ride-map class="map" [followHeading]="followHeading()" [lockZoom]="lockZoom()" />
+        } @else {
+          <app-ride-scene-3d
+            class="map"
+            [view]="view"
+            [quality]="sceneQuality()"
+            [headBobEnabled]="headBobEnabled()"
+            (fallback)="fallbackToMap($event)"
+          />
+        }
+        @if (viewNotice(); as notice) {
+          <p class="view-notice" role="status" data-testid="view-fallback">{{ notice | t }}</p>
+        }
 
         @if (session.phase() === 'ready') {
           <div class="overlay">
@@ -80,6 +94,16 @@
                     {{ 'ride.simulatorMode' | t }}
                   }
                 </p>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="cycleView()"
+                  [attr.aria-label]="'ride.changeView' | t"
+                  data-testid="cycle-view"
+                >
+                  <mat-icon fontSet="material-symbols-outlined">view_in_ar</mat-icon>
+                  {{ 'settings.views.' + view | t }} · V
+                </button>
                 <form [formGroup]="rider" class="rider" (ngSubmit)="begin()">
                   <mat-form-field appearance="outline">
                     <mat-label>{{ 'account.weight' | t }}</mat-label>
@@ -163,6 +187,16 @@
           </aside>
 
           <div class="controls">
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="cycleView()"
+              [attr.aria-label]="'ride.changeView' | t"
+              data-testid="cycle-view"
+            >
+              <mat-icon fontSet="material-symbols-outlined">view_in_ar</mat-icon>
+              {{ 'settings.views.' + view | t }} · V
+            </button>
             <button
               mat-flat-button
               type="button"
